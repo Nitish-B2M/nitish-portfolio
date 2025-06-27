@@ -1,0 +1,272 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "mysql"                //  ← using MySQL now
+  url      = env("DATABASE_URL")
+}
+
+/* ---------- ENUMS ---------- */
+enum Role {
+  ADMIN
+  USER
+}
+
+enum Category {
+  FRONTEND
+  BACKEND
+  FULLSTACK
+  MOBILE
+  OTHER
+}
+
+enum Status {
+  DRAFT
+  PENDING
+  STARTED
+  IN_PROGRESS
+  WORKING
+  COMPLETED
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+enum EntityType {
+  PROJECT
+  EXPERIENCE
+}
+
+/* ---------- USER ---------- */
+model User {
+  id            String       @id @default(cuid())
+  name          String?
+  email         String?      @unique
+  emailVerified DateTime?
+  imageUrl      String? 
+  password      String?
+  phone         String?
+  addressId     String?
+  address       Address?    @relation(fields: [addressId], references: [id])
+  role          Role        @default(USER)
+  active        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+  projects      Project[]
+  experiences   Experience[]
+  education     Education[]
+  skills        Skill[]
+  technologies  Technology[]
+  profile       Profile?
+
+  @@map("users")
+}
+
+/* ---------- PROJECT ---------- */
+model Project {
+  id            String            @id @default(cuid())
+  title         String
+  description   String            @db.Text
+  images        ProjectImage[]    @relation("ProjectImages")
+  demoUrl       String?
+  githubUrl     String?
+  category      Category          @default(FULLSTACK)
+  status        Status            @default(DRAFT)
+  userId        String
+  user          User              @relation(fields: [userId], references: [id])
+  skills        EntitySkill[]
+  technologies  EntityTechnology[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@map("projects")
+}
+
+model ProjectImage {
+  id        String   @id @default(cuid())
+  url       String
+  project   Project  @relation("ProjectImages", fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  caption   String?
+  order     Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("project_images")
+}
+
+/* ---------- EXPERIENCE ---------- */
+model Experience {
+  id           String            @id @default(cuid())
+  title        String
+  company      String
+  location     String
+  description  String            @db.Text
+  startDate    DateTime?
+  endDate      DateTime?
+  isCurrent    Boolean           @default(false)
+  userId       String
+  addressId    String?
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  address      Address?          @relation(fields: [addressId], references: [id])
+  skills       EntitySkill[]
+  technologies EntityTechnology[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+/* ---------- SKILL & TECHNOLOGY ---------- */
+model Skill {
+  id            String         @id @default(cuid())
+  name          String         @unique
+  userId        String?
+  user          User?          @relation(fields: [userId], references: [id])
+  entities      EntitySkill[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("skills")
+}
+
+model Technology {
+  id          String             @id @default(cuid())
+  name        String             @unique
+  userId      String?
+  user        User?              @relation(fields: [userId], references: [id])
+  entities    EntityTechnology[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@map("technologies")
+}
+
+/* ---------- JOIN TABLES ---------- */
+model EntitySkill {
+  id            String     @id @default(cuid())
+  entityType    EntityType @default(PROJECT)
+  projectId     String?
+  project       Project?   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  experienceId  String?
+  experience    Experience? @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  skillId       String
+  skill         Skill      @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@unique([entityType, skillId, projectId, experienceId])
+  @@map("entity_skills")
+}
+
+model EntityTechnology {
+  id             String      @id @default(cuid())
+  entityType     EntityType  @default(PROJECT)
+  projectId      String?
+  project        Project?    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  experienceId   String?
+  experience     Experience? @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  techId         String
+  technology     Technology  @relation(fields: [techId], references: [id], onDelete: Cascade)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@unique([entityType, techId, projectId, experienceId])
+  @@map("entity_technologies")
+}
+
+/* ---------- ADDRESS & SETTINGS ---------- */
+model Address {
+  id          String        @id @default(cuid())
+  street      String
+  city        String
+  state       String
+  country     String
+  postalCode  String
+  experiences Experience[]
+  education   Education[]
+  users       User[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model SiteSetting {
+  key   String @id
+  value String
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Profile {
+  id          String   @id @default(cuid())
+  bio         String?  @db.Text
+  location    String?
+  website     String?
+  twitter     String?
+  github      String?
+  linkedin    String?
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("profiles")
+}
+
+model Education {
+  id          String    @id @default(cuid())
+  school      String
+  degree      String
+  field       String
+  startDate   DateTime
+  endDate     DateTime?
+  description String?   @db.Text
+  userId      String
+  addressId   String?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  address     Address?  @relation(fields: [addressId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("education")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}

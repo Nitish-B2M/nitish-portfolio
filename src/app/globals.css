@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground: #1A1A1A;
+  --background: #FFF7ED;
+  --primary-50: #FFF7ED;
+  --primary-100: #FFE4CA;
+  --primary-200: #FFD1A8;
+  --primary-300: #FF9F5A;
+  --primary-400: #FF8534;
+  --primary-500: #FF6B0D;
+  --primary-600: #E85D00;
+  --primary-700: #CC4E00;
+  --primary-800: #A33F00;
+  --primary-900: #7A2F00;
+}
+
+html {
+  font-family: var(--font-sora), var(--font-poppins), system-ui, sans-serif;
+}
+
+body {
+  @apply bg-primary-50 text-gray-900;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  @apply font-sora text-primary-900;
+}
+
+p, span, a, button, input, textarea {
+  @apply font-poppins;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary-500 text-white px-4 py-2 rounded-md hover:bg-primary-600 transition-colors;
+  }
+
+  .btn-secondary {
+    @apply bg-primary-100 text-primary-700 px-4 py-2 rounded-md hover:bg-primary-200 transition-colors;
+  }
+
+  .input-field {
+    @apply bg-white border border-primary-200 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-300;
+  }
+
+  .card {
+    @apply bg-white rounded-lg shadow-md border border-primary-100 p-6 hover:shadow-lg transition-shadow;
+  }
+
+  .nav-link {
+    @apply text-primary-700 hover:text-primary-500 transition-colors;
+  }
+
+  .badge {
+    @apply px-2 py-1 text-sm rounded-full bg-primary-100 text-primary-700;
+  }
+}
