@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+import { NextConfig } from 'next';
+
+const config: NextConfig = {
   images: {
     remotePatterns: [
       {
@@ -30,12 +32,19 @@ const nextConfig = {
       bodySizeLimit: '2mb'
     }
   },
-  webpack: (config: any, { isServer }: { isServer: boolean }) => {
+  webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals = [...config.externals, '@prisma/client']
+    }
+    if (!isServer) {
+      // Don't include node-specific modules in client-side bundles
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        crypto: false,
+      };
     }
     return config
   }
 }
 
-export default nextConfig
+export default config
