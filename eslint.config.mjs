@@ -40,7 +40,7 @@ const eslintConfig = [
       '@typescript-eslint/no-unused-vars': 'error',
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-empty-interface': 'error',
-      '@typescript-eslint/no-empty-object-type': ['error', { allowObjectType: true }],
+      '@typescript-eslint/no-empty-object-type': ['error', { allowObjectTypes: true }],
       '@typescript-eslint/no-this-alias': 'error',
       '@typescript-eslint/no-unused-expressions': 'error',
       '@typescript-eslint/no-require-imports': 'error',
