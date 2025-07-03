@@ -101,9 +101,40 @@ export async function POST(request: Request) {
       );
     }
 
-    // Use a transaction to ensure all operations succeed or fail together
+    // Create or get skills and technologies before the transaction
+    const uniqueSkills = Array.isArray(data.skills) 
+      ? [...new Set(data.skills)].filter((s): s is string => typeof s === 'string').map(s => s.trim())
+      : [];
+    
+    const uniqueTechs = Array.isArray(data.technologies)
+      ? [...new Set(data.technologies)].filter((t): t is string => typeof t === 'string').map(t => t.trim())
+      : [];
+
+    // Create or get skills
+    const skills = await Promise.all(
+      uniqueSkills.map(name =>
+        prisma.skill.upsert({
+          where: { name },
+          create: { name, userId: session.user.id },
+          update: {}
+        })
+      )
+    );
+
+    // Create or get technologies
+    const technologies = await Promise.all(
+      uniqueTechs.map(name =>
+        prisma.technology.upsert({
+          where: { name },
+          create: { name, userId: session.user.id },
+          update: {}
+        })
+      )
+    );
+
+    // Use a transaction for the project creation and relations
     const result = await prisma.$transaction(async (tx) => {
-      // Create the project first
+      // Create the project
       const project = await tx.project.create({
         data: {
           title: data.title.trim(),
@@ -116,61 +147,29 @@ export async function POST(request: Request) {
         }
       });
 
-      // Handle skills if provided
-      if (Array.isArray(data.skills) && data.skills.length > 0) {
-        const uniqueSkills = [...new Set(data.skills)].filter((s): s is string => typeof s === 'string').map(s => s.trim());
-        
-        // Create new skills and get existing ones in a single query
-        const skills = await Promise.all(
-          uniqueSkills.map(name => 
-            tx.skill.upsert({
-              where: { name },
-              create: { name, userId: session.user.id },
-              update: {} // No update needed
-            })
-          )
-        );
-
-        // Create skill connections
-        if (skills.length > 0) {
-          await tx.entitySkill.createMany({
-            data: skills.map((skill) => ({
-              projectId: project.id,
-              skillId: skill.id,
-              entityType: "PROJECT"
-            }))
-          });
-        }
+      // Create skill connections if there are any skills
+      if (skills.length > 0) {
+        await tx.entitySkill.createMany({
+          data: skills.map((skill) => ({
+            projectId: project.id,
+            skillId: skill.id,
+            entityType: "PROJECT"
+          }))
+        });
       }
 
-      // Handle technologies if provided
-      if (Array.isArray(data.technologies) && data.technologies.length > 0) {
-        const uniqueTechs = [...new Set(data.technologies)].filter((t): t is string => typeof t === 'string').map(t => t.trim());
-        
-        // Create new technologies and get existing ones in a single query
-        const technologies = await Promise.all(
-          uniqueTechs.map(name => 
-            tx.technology.upsert({
-              where: { name },
-              create: { name, userId: session.user.id },
-              update: {} // No update needed
-            })
-          )
-        );
-
-        // Create technology connections
-        if (technologies.length > 0) {
-          await tx.entityTechnology.createMany({
-            data: technologies.map((tech) => ({
-              projectId: project.id,
-              techId: tech.id,
-              entityType: "PROJECT"
-            }))
-          });
-        }
+      // Create technology connections if there are any technologies
+      if (technologies.length > 0) {
+        await tx.entityTechnology.createMany({
+          data: technologies.map((tech) => ({
+            projectId: project.id,
+            techId: tech.id,
+            entityType: "PROJECT"
+          }))
+        });
       }
 
-      // Handle images if provided
+      // Create image connections if there are any images
       if (Array.isArray(data.images) && data.images.length > 0) {
         const validImages = data.images.filter((image: any) => 
           image && typeof image.url === 'string' && image.url.trim() !== ''
@@ -205,6 +204,8 @@ export async function POST(request: Request) {
           images: true
         }
       });
+    }, {
+      timeout: 10000 // Increase timeout to 10 seconds
     });
 
     return NextResponse.json(result);

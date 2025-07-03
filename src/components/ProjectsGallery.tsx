@@ -3,17 +3,13 @@
 import { useState } from "react";
 import { CloudinaryImage } from '@/components/ui/CloudinaryImage';
 import { FaChevronLeft, FaChevronRight, FaExternalLinkAlt, FaGithub } from 'react-icons/fa';
-import { ProjectImage } from "@/types/entity";
+import { Project as PrismaProject, ProjectImage, EntityTechnology, EntitySkill } from "@prisma/client";
+import ProjectModal from "./ProjectModal";
 
-type Project = {
-  id: string;
-  title: string;
-  description: string;
-  category: 'FRONTEND' | 'BACKEND' | 'FULLSTACK';
-  tags: string[];
-  demoUrl?: string;
-  githubUrl?: string;
+type Project = PrismaProject & {
   images: ProjectImage[];
+  technologies: (EntityTechnology & { technology: { name: string } })[];
+  skills: (EntitySkill & { skill: { name: string } })[];
 };
 
 const CATEGORIES = ["ALL", "FRONTEND", "BACKEND", "FULLSTACK"] as const;
@@ -21,6 +17,7 @@ const CATEGORIES = ["ALL", "FRONTEND", "BACKEND", "FULLSTACK"] as const;
 export default function ProjectsGallery({ projects }: { projects: Project[] }) {
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("ALL");
   const [activeImageIndex, setActiveImageIndex] = useState<Record<string, number>>({});
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   const filtered = projects.filter(
     (p) => category === "ALL" || p.category === category
@@ -66,9 +63,10 @@ export default function ProjectsGallery({ projects }: { projects: Project[] }) {
         {filtered.map((project) => (
           <div
             key={project.id}
-            className="group bg-primary-900/30 rounded-xl overflow-hidden border border-primary-800/50 hover:border-primary-600/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary-900/20"
+            className="group bg-primary-900/30 rounded-xl overflow-hidden border border-primary-800/50 hover:border-primary-600/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary-900/20 cursor-pointer"
+            onClick={() => setSelectedProject(project)}
           >
-            <div className="relative h-48 sm:h-56 overflow-hidden w-full justify-center flex">
+            <div className="relative">
               {project.images.length > 0 ? (
                 <>
                   <CloudinaryImage
@@ -84,7 +82,7 @@ export default function ProjectsGallery({ projects }: { projects: Project[] }) {
                     <>
                       <button
                         onClick={(e) => {
-                          e.preventDefault();
+                          e.stopPropagation();
                           prevImage(project.id, project.images.length);
                         }}
                         className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-primary-900/50 rounded-full text-white/75 hover:text-white hover:bg-primary-900/75 transition-all opacity-0 group-hover:opacity-100"
@@ -93,7 +91,7 @@ export default function ProjectsGallery({ projects }: { projects: Project[] }) {
                       </button>
                       <button
                         onClick={(e) => {
-                          e.preventDefault();
+                          e.stopPropagation();
                           nextImage(project.id, project.images.length);
                         }}
                         className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-primary-900/50 rounded-full text-white/75 hover:text-white hover:bg-primary-900/75 transition-all opacity-0 group-hover:opacity-100"
@@ -120,21 +118,26 @@ export default function ProjectsGallery({ projects }: { projects: Project[] }) {
                   )}
                 </>
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-primary-800/30">
+                <div className="w-full h-[200px] flex items-center justify-center bg-primary-800/30">
                   <span className="text-primary-200/50">No images available</span>
                 </div>
               )}
             </div>
 
-            <div className="p-4 sm:p-6">
+            <div className="p-4">
               <h3 className="text-lg sm:text-xl font-semibold mb-2 text-primary-100">
                 {project.title}
               </h3>
-              <p className="text-sm sm:text-base text-primary-200 mb-4">{project.description}</p>
+              <p className="text-sm sm:text-base text-primary-200 mb-4 line-clamp-2">
+                {project.description}
+              </p>
               
               {/* Tags */}
               <div className="flex flex-wrap gap-2 mb-4">
-                {project.tags && project.tags.map((tag) => (
+                {[
+                  ...(project.technologies?.map(t => t.technology.name) || []),
+                  ...(project.skills?.map(s => s.skill.name) || [])
+                ].map((tag) => (
                   <span
                     key={tag}
                     className="px-2 py-1 text-xs rounded-full bg-primary-900/30 text-primary-200 border border-primary-800/50"
@@ -152,6 +155,7 @@ export default function ProjectsGallery({ projects }: { projects: Project[] }) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 text-sm text-blue-100 hover:text-blue-300 transition-colors"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <FaExternalLinkAlt />
                     <span>Live Demo</span>
@@ -163,6 +167,7 @@ export default function ProjectsGallery({ projects }: { projects: Project[] }) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 text-sm text-blue-100 hover:text-blue-300 transition-colors"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <FaGithub />
                     <span>Source Code</span>
@@ -173,6 +178,15 @@ export default function ProjectsGallery({ projects }: { projects: Project[] }) {
           </div>
         ))}
       </div>
+
+      {/* Project Modal */}
+      {selectedProject && (
+        <ProjectModal
+          project={selectedProject}
+          isOpen={!!selectedProject}
+          onClose={() => setSelectedProject(null)}
+        />
+      )}
     </div>
   );
 } 
