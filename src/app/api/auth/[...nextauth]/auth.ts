@@ -1,21 +1,29 @@
-import { NextAuthOptions, User, Session } from 'next-auth';
+import { NextAuthOptions, Session, User, DefaultSession } from 'next-auth';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/prisma';
 import { compare } from 'bcryptjs';
 import { Role } from '@/types/user';
 import { JWT } from 'next-auth/jwt';
+import { TOKEN_EXPIRATION, TOKEN_TYPE, TOKEN_TYPES } from '@/constants/auth';
+import { AdapterUser } from 'next-auth/adapters';
 
-interface CustomSession extends Session {
-  sessionToken?: string;
+// Helper function to generate tokens
+function generateTokens(userId: string) {
+  const now = Math.floor(Date.now() / 1000);
+  return {
+    accessToken: Buffer.from(`${userId}:${now + TOKEN_EXPIRATION.ACCESS_TOKEN}`).toString('base64'),
+    refreshToken: Buffer.from(`${userId}:${now + TOKEN_EXPIRATION.REFRESH_TOKEN}`).toString('base64'),
+    accessTokenExpiresAt: new Date(now * 1000 + TOKEN_EXPIRATION.ACCESS_TOKEN * 1000),
+    refreshTokenExpiresAt: new Date(now * 1000 + TOKEN_EXPIRATION.REFRESH_TOKEN * 1000),
+  };
 }
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-    updateAge: 24 * 60 * 60, // 24 hours
+    maxAge: TOKEN_EXPIRATION.SESSION,
   },
   pages: {
     signIn: '/auth/signin',
@@ -29,126 +37,182 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials): Promise<User | null> {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error('Invalid credentials');
+          throw new Error('Email and password required');
         }
 
         const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email,
-          },
+          where: { email: credentials.email },
           select: {
             id: true,
             email: true,
             password: true,
             name: true,
             role: true,
-            active: true,
           },
         });
 
-        if (!user || !user.password) {
-          throw new Error('Invalid credentials');
-        }
-
-        if (!user.active) {
-          throw new Error('User account is inactive');
+        if (!user || !user.password || !user.email) {
+          throw new Error('User not found');
         }
 
         const isValid = await compare(credentials.password, user.password);
-
         if (!isValid) {
-          throw new Error('Invalid credentials');
+          throw new Error('Invalid password');
         }
 
         return {
           id: user.id,
-          email: user.email ?? '',
-          name: user.name ?? '',
+          email: user.email,
+          name: user.name || null,
           role: user.role,
         };
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }): Promise<JWT> {
       if (user) {
-        // Check if user still exists and is active on every token refresh
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { active: true, role: true },
+        // Initial sign in
+        const tokens = generateTokens(user.id);
+        
+        // Update or create account
+        await prisma.account.upsert({
+          where: {
+            provider_providerAccountId: {
+              provider: 'credentials',
+              providerAccountId: user.id,
+            },
+          },
+          create: {
+            userId: user.id,
+            type: 'credentials',
+            provider: 'credentials',
+            providerAccountId: user.id,
+            access_token: tokens.accessToken,
+            refresh_token: tokens.refreshToken,
+            expires_at: Math.floor(tokens.accessTokenExpiresAt.getTime() / 1000),
+            token_type: TOKEN_TYPE,
+          },
+          update: {
+            access_token: tokens.accessToken,
+            refresh_token: tokens.refreshToken,
+            expires_at: Math.floor(tokens.accessTokenExpiresAt.getTime() / 1000),
+          },
         });
 
-        if (!dbUser || !dbUser.active) {
-          throw new Error('User no longer exists or is inactive');
-        }
-
-        // Only create/update account on initial sign in
-        if (account) {
-          // Check if account exists
-          const existingAccount = await prisma.account.findUnique({
+        // Store tokens in the JWT
+        token.id = user.id;
+        token.role = user.role as Role;
+        token.accessToken = tokens.accessToken;
+        token.refreshToken = tokens.refreshToken;
+        token.accessTokenExpiresAt = tokens.accessTokenExpiresAt.getTime();
+        token.refreshTokenExpiresAt = tokens.refreshTokenExpiresAt.getTime();
+      } else if (token.accessTokenExpiresAt && token.refreshTokenExpiresAt) {
+        // Subsequent requests - check token expiration
+        const now = Date.now();
+        if (token.accessTokenExpiresAt < now) {
+          if (token.refreshTokenExpiresAt < now) {
+            // Both tokens expired - force sign out
+            return {} as JWT;
+          }
+          // Access token expired but refresh token valid - generate new tokens
+          const tokens = generateTokens(token.id as string);
+          
+          // Update account with new tokens
+          await prisma.account.update({
             where: {
               provider_providerAccountId: {
                 provider: 'credentials',
-                providerAccountId: user.id,
+                providerAccountId: token.id as string,
               },
+            },
+            data: {
+              access_token: tokens.accessToken,
+              refresh_token: tokens.refreshToken,
+              expires_at: Math.floor(tokens.accessTokenExpiresAt.getTime() / 1000),
             },
           });
 
-          if (!existingAccount) {
-            // Create new account only if it doesn't exist
-            await prisma.account.create({
-              data: {
-                userId: user.id,
-                type: 'credentials',
-                provider: 'credentials',
-                providerAccountId: user.id,
-              },
-            });
-          }
+          // Update token with new values
+          token.accessToken = tokens.accessToken;
+          token.refreshToken = tokens.refreshToken;
+          token.accessTokenExpiresAt = tokens.accessTokenExpiresAt.getTime();
+          token.refreshTokenExpiresAt = tokens.refreshTokenExpiresAt.getTime();
         }
-
-        token.role = user.role;
-        token.id = user.id;
       }
       return token;
     },
-    async session({ session, token }) {
-      const customSession = session as CustomSession;
+    async session({ session, token }): Promise<Session> {
       if (token) {
-        customSession.user.id = token.id as string;
-        customSession.user.role = token.role as Role;
+        // Add user info to session
+        session.user.id = token.id as string;
+        session.user.role = token.role as Role;
+        session.accessToken = token.accessToken as string;
+        session.accessTokenExpiresAt = token.accessTokenExpiresAt as number;
 
-        // Update session in database
-        if (customSession.sessionToken) {
-          await prisma.session.upsert({
-            where: {
-              sessionToken: customSession.sessionToken,
-            },
-            create: {
-              sessionToken: customSession.sessionToken,
-              userId: token.id as string,
-              expires: session.expires,
-            },
-            update: {
-              expires: session.expires,
-            },
-          });
-        }
+        // Update or create session in database
+        await prisma.session.upsert({
+          where: { sessionToken: session.accessToken },
+          create: {
+            sessionToken: session.accessToken,
+            userId: session.user.id,
+            expires: new Date(session.accessTokenExpiresAt),
+          },
+          update: {
+            expires: new Date(session.accessTokenExpiresAt),
+          },
+        });
       }
-      return customSession;
+      return session;
     },
   },
   events: {
-    async signOut({ token, session }) {
-      const customSession = session as CustomSession;
-      if (token?.id && customSession?.sessionToken) {
-        // Delete the specific session
-        await prisma.session.delete({
-          where: {
-            sessionToken: customSession.sessionToken,
+    async signOut({ token }) {
+      // Delete session and update account on sign out
+      if (token) {
+        await prisma.session.deleteMany({
+          where: { userId: token.id as string },
+        });
+
+        await prisma.account.updateMany({
+          where: { userId: token.id as string },
+          data: {
+            access_token: null,
+            refresh_token: null,
+            expires_at: null,
           },
         });
       }
     },
   },
-}; 
+};
+
+// Extend next-auth types
+declare module 'next-auth' {
+  interface Session {
+    user: {
+      id: string;
+      role: Role;
+    } & DefaultSession['user'];
+    accessToken: string;
+    accessTokenExpiresAt: number;
+  }
+
+  interface User {
+    id: string;
+    email: string;
+    name: string | null;
+    role: Role;
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    id?: string;
+    role?: Role;
+    accessToken?: string;
+    refreshToken?: string;
+    accessTokenExpiresAt?: number;
+    refreshTokenExpiresAt?: number;
+  }
+} 
