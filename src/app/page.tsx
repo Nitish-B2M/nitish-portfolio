@@ -11,7 +11,7 @@ async function getProjects() {
   try {
     // For server components in development
     const response = await fetch(`${process.env.NEXTAUTH_URL}/api/projects`, {
-      cache: 'no-store',
+      next: { revalidate: 3600 },
       headers: {
         'Content-Type': 'application/json',
       },
@@ -107,4 +107,4 @@ export default async function Home() {
       </main>
     </>
   );
-} 
+}

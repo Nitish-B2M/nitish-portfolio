@@ -1,215 +1,106 @@
-# Portfolio Project
+# NITISH-PORTFOLIO
 
-A modern portfolio website built with Next.js 14, Prisma, and MySQL.
+*Showcase Your Brilliance, Inspire the World*
+
+![last-commit](https://img.shields.io/github/last-commit/Nitish-B2M/nitish-portfolio?style=flat&logo=git&logoColor=white&color=0080ff)
+![repo-top-language](https://img.shields.io/github/languages/top/Nitish-B2M/nitish-portfolio?style=flat&color=0080ff)
+![repo-language-count](https://img.shields.io/github/languages/count/Nitish-B2M/nitish-portfolio?style=flat&color=0080ff)
+
+*Built with the tools and technologies:*
+
+![JSON](https://img.shields.io/badge/JSON-000000.svg?style=flat&logo=JSON&logoColor=white)
+![Markdown](https://img.shields.io/badge/Markdown-000000.svg?style=flat&logo=Markdown&logoColor=white)
+![npm](https://img.shields.io/badge/npm-CB3837.svg?style=flat&logo=npm&logoColor=white)
+![Autoprefixer](https://img.shields.io/badge/Autoprefixer-DD3735.svg?style=flat&logo=Autoprefixer&logoColor=white)
+![PostCSS](https://img.shields.io/badge/PostCSS-DD3A0A.svg?style=flat&logo=PostCSS&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E.svg?style=flat&logo=JavaScript&logoColor=black)
+![React](https://img.shields.io/badge/React-61DAFB.svg?style=flat&logo=React&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6.svg?style=flat&logo=TypeScript&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-2D3748.svg?style=flat&logo=Prisma&logoColor=white)
+![Zod](https://img.shields.io/badge/Zod-3E67B1.svg?style=flat&logo=Zod&logoColor=white)
+![Cloudinary](https://img.shields.io/badge/Cloudinary-3448C5.svg?style=flat&logo=Cloudinary&logoColor=white)
+![ESLint](https://img.shields.io/badge/ESLint-4B32C3.svg?style=flat&logo=ESLint&logoColor=white)
+![React Hook Form](https://img.shields.io/badge/React%20Hook%20Form-EC5990.svg?style=flat&logo=React-Hook-Form&logoColor=white)
+
+---
 
 ## Table of Contents
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Environment Setup](#environment-setup)
-- [Database Setup](#database-setup)
-- [Development](#development)
-- [Prisma Commands](#prisma-commands)
-- [Common Issues & Solutions](#common-issues--solutions)
-- [Project Structure](#project-structure)
 
-## Prerequisites
+*   [Overview](#overview)
+*   [Getting Started](#getting-started)
+    *   [Prerequisites](#prerequisites)
+    *   [Installation](#installation)
+    *   [Usage](#usage)
+    *   [Testing](#testing)
 
-- Node.js 18.x or later
-- MySQL 8.0 or later
-- npm or yarn package manager
+---
 
-## Installation
+## Overview
 
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd portfolio
+Nitish-portfolio is a comprehensive developer portfolio framework built with Next.js, Prisma, and Tailwind CSS, designed to streamline your personal website development. The core features include:
+
+*   🛠️ **Data Models & Schema:** Structured storage for user info, projects, and content, ensuring data consistency.
+*   🎨 **Seamless Styling:** Tailwind CSS integrated with PostCSS for consistent, utility-first design.
+*   🔐 **Robust Authentication:** Secure login, user roles, and session management with NextAuth and Prisma.
+*   📡 **Powerful API Endpoints:** Manage projects, experience, contact forms, and media uploads effortlessly.
+*   🖼️ **Media Management:** Cloudinary integration for optimized image and video handling.
+*   ⚙️ **Modular UI Components:** Reusable forms, modals, buttons, and more for a scalable frontend architecture.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+This project requires the following dependencies:
+
+*   **Programming Language:** TypeScript
+*   **Package Manager:** Npm
+
+### Installation
+
+Build nitish-portfolio from the source and install dependencies:
+
+1.  **Clone the repository:**
+
+    ```sh
+    ❯ git clone https://github.com/Nitish-B2M/nitish-portfolio
+    ```
+
+2.  **Navigate to the project directory:**
+
+    ```sh
+    ❯ cd nitish-portfolio
+    ```
+
+3.  **Install the dependencies:**
+
+**Using [npm](https://www.npmjs.com/):**
+
+```sh
+❯ npm install
 ```
 
-2. Install dependencies:
-```bash
-npm install
-# or
-yarn install
-```
+### Usage
 
-## Environment Setup
+Run the project with:
 
-1. Create a `.env` file in the root directory:
-```env
-# Database
-DATABASE_URL="mysql://user:password@localhost:3306/portfolio"
+**Using [npm](https://www.npmjs.com/):**
 
-# NextAuth
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-secret-key"
-
-# Optional: Email Provider (if using email authentication)
-EMAIL_SERVER_HOST=smtp.example.com
-EMAIL_SERVER_PORT=587
-EMAIL_SERVER_USER=your-email
-EMAIL_SERVER_PASSWORD=your-password
-EMAIL_FROM=noreply@example.com
-```
-
-## Database Setup
-
-1. Initialize Prisma:
-```bash
-npx prisma init
-```
-
-2. Apply database migrations:
-```bash
-npx prisma migrate dev
-```
-
-3. Generate Prisma Client:
-```bash
-npx prisma generate
-```
-
-4. (Optional) Seed the database:
-```bash
-npx prisma db seed
-```
-
-## Development
-
-1. Start the development server:
-```bash
-npm run dev
-# or
-yarn dev
-```
-
-2. Build for production:
-```bash
-npm run build
-# or
-yarn build
-```
-
-3. Start production server:
-```bash
+```sh
 npm start
-# or
-yarn start
 ```
 
-## Prisma Commands
+### Testing
 
-### Schema Changes
+Nitish-portfolio uses the {**test_framework**} test framework. Run the test suite with:
 
-1. After modifying the schema:
-```bash
-# Create a new migration
-npx prisma migrate dev --name <migration-name>
+**Using [npm](https://www.npmjs.com/):**
 
-# Apply migrations without modifying the schema
-npx prisma migrate deploy
-
-# Reset database and apply all migrations
-npx prisma migrate reset
-
-# Push schema changes without creating migrations (development only)
-npx prisma db push
+```sh
+npm test
 ```
 
-2. Update Prisma Client:
-```bash
-npx prisma generate
-```
+---
 
-### Database Management
-
-1. View database in Prisma Studio:
-```bash
-npx prisma studio
-```
-
-2. Pull changes from existing database:
-```bash
-npx prisma db pull
-```
-
-### Model Updates
-
-When updating models in `schema.prisma`, follow these steps:
-
-1. Make changes to the schema
-2. Create a migration:
-```bash
-npx prisma migrate dev --name <descriptive-name>
-```
-3. Update types (if using TypeScript):
-```bash
-npx prisma generate
-```
-
-## Common Issues & Solutions
-
-### Prisma Client Generation Issues
-
-If you encounter issues with Prisma Client generation:
-
-1. Delete generated files:
-```bash
-rm -rf node_modules/.prisma
-```
-
-2. Reinstall dependencies:
-```bash
-npm install
-```
-
-3. Regenerate Prisma Client:
-```bash
-npx prisma generate
-```
-
-### Database Connection Issues
-
-1. Verify your database connection:
-```bash
-npx prisma db pull
-```
-
-2. Reset the database (caution: this will delete all data):
-```bash
-npx prisma migrate reset
-```
-
-## Project Structure
-
-```
-portfolio/
-├── prisma/
-│   ├── migrations/
-│   └── schema.prisma
-├── public/
-├── src/
-│   ├── app/
-│   │   ├── api/
-│   │   ├── admin/
-│   │   └── auth/
-│   ├── components/
-│   ├── lib/
-│   └── types/
-├── .env
-├── .gitignore
-├── package.json
-└── README.md
-```
-
-### Key Directories
-
-- `prisma/`: Database schema and migrations
-- `src/app/`: Next.js application routes and API endpoints
-- `src/components/`: Reusable React components
-- `src/lib/`: Utility functions and configurations
-- `src/types/`: TypeScript type definitions
-
-## License
-
-[MIT](LICENSE)
+[⬆ Return](#top)
